@@ -98,29 +98,54 @@ class Visual {
         if (categories.length < 2 || values.length === 0) {
             return;
         }
-        // Extract data for Sankey
+        // // Step 1: Build raw nodes and links
+        // const rawNodes: SankeyNode[] = [];
+        // const rawLinks: SankeyLink[] = [];
+        // categories.forEach((category, index) => {
+        //   const categoryValues = category.values.map(String);
+        //   categoryValues.forEach((value, i) => {
+        //     rawNodes.push({ name: value });
+        //     if (index < categories.length - 1) {
+        //       const nextCategoryValues = categories[index + 1].values.map(String);
+        //       const targetValue = nextCategoryValues[i];
+        //       rawNodes.push({ name: targetValue });
+        //       rawLinks.push({
+        //         source: { name: value },
+        //         target: { name: targetValue },
+        //         value: (values[0].values[i] as number) || 1,
+        //       });
+        //     }
+        //   });
+        // });
+        // // Step 2: Sanitize data
+        // const { nodes, links } = sanitizeSankeyData(rawNodes, rawLinks);
+        const nodeMap = {};
+        const displayNameMap = {};
         const nodes = [];
         const links = [];
-        const nodeMap = {};
-        // Generate nodes and links
+        // Step 3 node/link generation
         categories.forEach((category, index) => {
             const categoryValues = category.values.map(String);
             categoryValues.forEach((value, i) => {
-                if (!(value in nodeMap)) {
-                    nodeMap[value] = nodes.length;
-                    nodes.push({ name: value });
+                const sourceKey = `${value}__${index}`;
+                if (!(sourceKey in nodeMap)) {
+                    nodeMap[sourceKey] = nodes.length;
+                    displayNameMap[sourceKey] = value;
+                    nodes.push({ name: sourceKey, displayName: value });
                 }
                 if (index < categories.length - 1) {
                     const nextCategoryValues = categories[index + 1].values.map(String);
                     const targetValue = nextCategoryValues[i];
-                    if (!(targetValue in nodeMap)) {
-                        nodeMap[targetValue] = nodes.length;
-                        nodes.push({ name: targetValue });
+                    const targetKey = `${targetValue}__${index + 1}`;
+                    if (!(targetKey in nodeMap)) {
+                        nodeMap[targetKey] = nodes.length;
+                        displayNameMap[targetKey] = targetValue;
+                        nodes.push({ name: targetKey, displayName: targetValue });
                     }
                     links.push({
-                        source: nodeMap[value],
-                        target: nodeMap[targetValue],
-                        value: values[0].values[i] || 1, // Default value to 1 if missing
+                        source: nodeMap[sourceKey],
+                        target: nodeMap[targetKey],
+                        value: values[0].values[i] || 1,
                     });
                 }
             });
@@ -145,10 +170,10 @@ class Visual {
             .data(sankeyData.nodes)
             .enter()
             .append("rect")
-            .attr("x", (d) => d.x0)
-            .attr("y", (d) => d.y0)
-            .attr("height", (d) => d.y1 - d.y0)
-            .attr("width", (d) => d.x1 - d.x0)
+            .attr("x", (d) => (isNaN(d.x0) ? 0 : d.x0))
+            .attr("y", (d) => (isNaN(d.y0) ? 0 : d.y0))
+            .attr("height", (d) => (isNaN(d.y1 - d.y0) ? 0 : d.y1 - d.y0))
+            .attr("width", (d) => (isNaN(d.x1 - d.x0) ? 0 : d.x1 - d.x0))
             .style("fill", (d) => (d.color = colorScale(d.name))) // Assign color using colorScale
             .style("stroke", "black");
         // Draw links
@@ -163,7 +188,19 @@ class Visual {
             .attr("stroke", (d) => d.source.color)
             .attr("fill", "none")
             .append("title")
-            .text((d) => `${d.source.name} → ${d.target.name}\\n${d.value}`);
+            .text((d) => `${d.source.displayName} → ${d.target.displayName}\n${d.value}`);
+        this.svg
+            .append("g")
+            .selectAll("text")
+            .data(sankeyData.nodes)
+            .enter()
+            .append("text")
+            .attr("x", (d) => (isNaN(d.x1) ? 0 : d.x1) + 6)
+            .attr("y", (d) => (isNaN(d.y0) ? 0 : (d.y0 + d.y1) / 2))
+            .attr("dy", "0.35em")
+            .text((d) => d.displayName || d.name)
+            .style("font-size", "10px")
+            .style("fill", "#333");
     }
     getFormattingModel() {
         return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
