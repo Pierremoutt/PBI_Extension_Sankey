@@ -1,0 +1,17 @@
+{
+		"version": "1.0.0.0",
+		"author": {"name":"PLG","email":"legarspierre@gmail.com"},
+		"resources": [
+			{
+				"resourceId": "rId0",
+				"sourceType": 5,
+				"file": "resources/visual135856BF5181B4672807979D34CE8AD09.pbiviz.json"
+			}
+		],
+		"visual": {"name":"visual1","displayName":"visual_1","guid":"visual135856BF5181B4672807979D34CE8AD09","visualClassName":"Visual","version":"1.0.0.0","description":"tentative of Sankey","supportUrl":"test.com","gitHubUrl":""},
+		"metadata": {
+			"pbivizjson": {
+				"resourceId": "rId0"
+			}
+		}
+	}

@@ -12,22 +12,7 @@ import DataView = powerbiVisualsApi.DataView;
 import DataViewCategorical = powerbiVisualsApi.DataViewCategorical;
 import DataViewValueColumn = powerbiVisualsApi.DataViewValueColumn;
 
-interface SankeyNode {
-  name: string;
-  x0?: number;
-  x1?: number;
-  y0?: number;
-  y1?: number;
-  index?: number;
-  value?: number;
-}
-
-interface SankeyLink {
-  source: SankeyNode | number;
-  target: SankeyNode | number;
-  value: number;
-  width?: number;
-}
+import { SankeyLink, SankeyNode } from "./interface/types";
 
 export class Visual implements IVisual {
   private target: HTMLElement;
@@ -69,34 +54,68 @@ export class Visual implements IVisual {
       return;
     }
 
-    // Extract data for Sankey
+    // // Step 1: Build raw nodes and links
+    // const rawNodes: SankeyNode[] = [];
+    // const rawLinks: SankeyLink[] = [];
+
+    // categories.forEach((category, index) => {
+    //   const categoryValues = category.values.map(String);
+
+    //   categoryValues.forEach((value, i) => {
+    //     rawNodes.push({ name: value });
+
+    //     if (index < categories.length - 1) {
+    //       const nextCategoryValues = categories[index + 1].values.map(String);
+    //       const targetValue = nextCategoryValues[i];
+
+    //       rawNodes.push({ name: targetValue });
+
+    //       rawLinks.push({
+    //         source: { name: value },
+    //         target: { name: targetValue },
+    //         value: (values[0].values[i] as number) || 1,
+    //       });
+    //     }
+    //   });
+    // });
+
+    // // Step 2: Sanitize data
+    // const { nodes, links } = sanitizeSankeyData(rawNodes, rawLinks);
+    const nodeMap: { [key: string]: number } = {};
+    const displayNameMap: { [key: string]: string } = {};
+
     const nodes: SankeyNode[] = [];
     const links: SankeyLink[] = [];
-    const nodeMap: { [key: string]: number } = {};
 
-    // Generate nodes and links
+    // Step 3 node/link generation
+
     categories.forEach((category, index) => {
       const categoryValues = category.values.map(String);
 
       categoryValues.forEach((value, i) => {
-        if (!(value in nodeMap)) {
-          nodeMap[value] = nodes.length;
-          nodes.push({ name: value });
+        const sourceKey = `${value}__${index}`;
+
+        if (!(sourceKey in nodeMap)) {
+          nodeMap[sourceKey] = nodes.length;
+          displayNameMap[sourceKey] = value;
+          nodes.push({ name: sourceKey, displayName: value });
         }
 
         if (index < categories.length - 1) {
           const nextCategoryValues = categories[index + 1].values.map(String);
           const targetValue = nextCategoryValues[i];
+          const targetKey = `${targetValue}__${index + 1}`;
 
-          if (!(targetValue in nodeMap)) {
-            nodeMap[targetValue] = nodes.length;
-            nodes.push({ name: targetValue });
+          if (!(targetKey in nodeMap)) {
+            nodeMap[targetKey] = nodes.length;
+            displayNameMap[targetKey] = targetValue;
+            nodes.push({ name: targetKey, displayName: targetValue });
           }
 
           links.push({
-            source: nodeMap[value],
-            target: nodeMap[targetValue],
-            value: (values[0].values[i] as number) || 1, // Default value to 1 if missing
+            source: nodeMap[sourceKey],
+            target: nodeMap[targetKey],
+            value: (values[0].values[i] as number) || 1,
           });
         }
       });
@@ -124,10 +143,11 @@ export class Visual implements IVisual {
       .data(sankeyData.nodes)
       .enter()
       .append("rect")
-      .attr("x", (d: any) => d.x0)
-      .attr("y", (d: any) => d.y0)
-      .attr("height", (d: any) => d.y1 - d.y0)
-      .attr("width", (d: any) => d.x1 - d.x0)
+      .attr("x", (d: any) => (isNaN(d.x0) ? 0 : d.x0))
+      .attr("y", (d: any) => (isNaN(d.y0) ? 0 : d.y0))
+      .attr("height", (d: any) => (isNaN(d.y1 - d.y0) ? 0 : d.y1 - d.y0))
+      .attr("width", (d: any) => (isNaN(d.x1 - d.x0) ? 0 : d.x1 - d.x0))
+
       .style("fill", (d: any) => (d.color = colorScale(d.name))) // Assign color using colorScale
       .style("stroke", "black");
 
@@ -145,10 +165,23 @@ export class Visual implements IVisual {
       .append("title")
       .text(
         (d: SankeyLink) =>
-          `${(d.source as SankeyNode).name} → ${
-            (d.target as SankeyNode).name
-          }\\n${d.value}`
+          `${(d.source as SankeyNode).displayName} → ${
+            (d.target as SankeyNode).displayName
+          }\n${d.value}`
       );
+
+    this.svg
+      .append("g")
+      .selectAll("text")
+      .data(sankeyData.nodes)
+      .enter()
+      .append("text")
+      .attr("x", (d: any) => (isNaN(d.x1) ? 0 : d.x1) + 6)
+      .attr("y", (d: any) => (isNaN(d.y0) ? 0 : (d.y0 + d.y1) / 2))
+      .attr("dy", "0.35em")
+      .text((d: SankeyNode) => d.displayName || d.name)
+      .style("font-size", "10px")
+      .style("fill", "#333");
   }
   public getFormattingModel(): powerbi.visuals.FormattingModel {
     return this.formattingSettingsService.buildFormattingModel(
