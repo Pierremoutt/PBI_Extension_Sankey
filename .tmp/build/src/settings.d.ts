@@ -18,6 +18,7 @@ declare class EnableAxisCardSettings extends Card {
  * Color Selector Formatting Card
  */
 declare class ColorSelectorCardSettings extends Card {
+    linkColorSource: formattingSettings.ItemDropdown;
     name: string;
     displayName: string;
     slices: Slice[];

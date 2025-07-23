@@ -54,33 +54,6 @@ export class Visual implements IVisual {
       return;
     }
 
-    // // Step 1: Build raw nodes and links
-    // const rawNodes: SankeyNode[] = [];
-    // const rawLinks: SankeyLink[] = [];
-
-    // categories.forEach((category, index) => {
-    //   const categoryValues = category.values.map(String);
-
-    //   categoryValues.forEach((value, i) => {
-    //     rawNodes.push({ name: value });
-
-    //     if (index < categories.length - 1) {
-    //       const nextCategoryValues = categories[index + 1].values.map(String);
-    //       const targetValue = nextCategoryValues[i];
-
-    //       rawNodes.push({ name: targetValue });
-
-    //       rawLinks.push({
-    //         source: { name: value },
-    //         target: { name: targetValue },
-    //         value: (values[0].values[i] as number) || 1,
-    //       });
-    //     }
-    //   });
-    // });
-
-    // // Step 2: Sanitize data
-    // const { nodes, links } = sanitizeSankeyData(rawNodes, rawLinks);
     const nodeMap: { [key: string]: number } = {};
     const displayNameMap: { [key: string]: string } = {};
 
@@ -136,6 +109,18 @@ export class Visual implements IVisual {
     });
 
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+    const colorSource =
+      this.formattingSettings.colorSelector.linkColorSource.value.value;
+
+    // Assign colors to nodes
+    const nodeColorMap: { [key: string]: string } = {};
+    sankeyData.nodes.forEach((node: any) => {
+      const color = d3.schemeCategory10[node.index % 10];
+      node.color = color;
+      nodeColorMap[node.name] = color;
+    });
+
     // Draw nodes
     this.svg
       .append("g")
@@ -160,7 +145,11 @@ export class Visual implements IVisual {
       .append("path")
       .attr("d", sankeyLinkHorizontal<SankeyNode, SankeyLink>())
       .attr("stroke-width", (d: SankeyLink) => Math.max(1, d.width!))
-      .attr("stroke", (d: any) => d.source.color)
+
+      .attr("stroke", (d: any) =>
+        colorSource === "source" ? d.source.color : d.target.color
+      )
+
       .attr("fill", "none")
       .append("title")
       .text(

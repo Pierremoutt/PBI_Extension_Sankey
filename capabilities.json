@@ -57,20 +57,10 @@
     },
     "colorSelector": {
       "properties": {
-        "linkColorMode": {
-          "displayName": "Links Color",
-          "description": "Choose whether link color is based on source or target node.",
+        "linkColorSource": {
+          "displayName": "Link Color Source",
           "type": {
-            "enumeration": [
-              {
-                "displayName": "Source",
-                "value": "source"
-              },
-              {
-                "displayName": "Target",
-                "value": "target"
-              }
-            ]
+            "enumeration": [{ "value": "source" }, { "value": "target" }]
           }
         }
       }

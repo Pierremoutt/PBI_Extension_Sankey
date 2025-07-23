@@ -5,6 +5,7 @@ import Model = formattingSettings.Model;
 import Slice = formattingSettings.Slice;
 import ColorPicker = formattingSettings.ColorPicker;
 import ToggleSwitch = formattingSettings.ToggleSwitch;
+import Dropdown = formattingSettings.ItemDropdown;
 
 /**
  * Enable Axis Formatting Card
@@ -31,11 +32,21 @@ class EnableAxisCardSettings extends Card {
  * Color Selector Formatting Card
  */
 class ColorSelectorCardSettings extends Card {
+  linkColorSource = new Dropdown({
+    name: "linkColorSource",
+    displayName: "Link Color Source",
+    value: { displayName: "Source", value: "source" },
+    items: [
+      { displayName: "Source", value: "source" },
+      { displayName: "Target", value: "target" },
+    ],
+  });
+
   name: string = "colorSelector";
   displayName: string = "Data Colors";
 
   // slices will be populated in barChart settings model `populateColorSelector` method
-  slices: Slice[] = [];
+  slices: Slice[] = [this.linkColorSource];
 }
 
 export class FormatSettingsModel extends Model {

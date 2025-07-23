@@ -15,6 +15,7 @@ var Card = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* 
 var Model = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.Model */ .z.Kx;
 var ColorPicker = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.ColorPicker */ .z.sk;
 var ToggleSwitch = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.ToggleSwitch */ .z.jF;
+var Dropdown = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.ItemDropdown */ .z.PA;
 /**
  * Enable Axis Formatting Card
  */
@@ -38,10 +39,19 @@ class EnableAxisCardSettings extends Card {
  * Color Selector Formatting Card
  */
 class ColorSelectorCardSettings extends Card {
+    linkColorSource = new Dropdown({
+        name: "linkColorSource",
+        displayName: "Link Color Source",
+        value: { displayName: "Source", value: "source" },
+        items: [
+            { displayName: "Source", value: "source" },
+            { displayName: "Target", value: "target" },
+        ],
+    });
     name = "colorSelector";
     displayName = "Data Colors";
     // slices will be populated in barChart settings model `populateColorSelector` method
-    slices = [];
+    slices = [this.linkColorSource];
 }
 class FormatSettingsModel extends Model {
     // Create formatting settings model formatting cards
@@ -98,27 +108,6 @@ class Visual {
         if (categories.length < 2 || values.length === 0) {
             return;
         }
-        // // Step 1: Build raw nodes and links
-        // const rawNodes: SankeyNode[] = [];
-        // const rawLinks: SankeyLink[] = [];
-        // categories.forEach((category, index) => {
-        //   const categoryValues = category.values.map(String);
-        //   categoryValues.forEach((value, i) => {
-        //     rawNodes.push({ name: value });
-        //     if (index < categories.length - 1) {
-        //       const nextCategoryValues = categories[index + 1].values.map(String);
-        //       const targetValue = nextCategoryValues[i];
-        //       rawNodes.push({ name: targetValue });
-        //       rawLinks.push({
-        //         source: { name: value },
-        //         target: { name: targetValue },
-        //         value: (values[0].values[i] as number) || 1,
-        //       });
-        //     }
-        //   });
-        // });
-        // // Step 2: Sanitize data
-        // const { nodes, links } = sanitizeSankeyData(rawNodes, rawLinks);
         const nodeMap = {};
         const displayNameMap = {};
         const nodes = [];
@@ -163,6 +152,14 @@ class Visual {
             links: links.map((d) => Object.assign({}, d)),
         });
         const colorScale = d3__WEBPACK_IMPORTED_MODULE_0__/* .scaleOrdinal */ .UMr(d3__WEBPACK_IMPORTED_MODULE_0__/* .schemeCategory10 */ .t55);
+        const colorSource = this.formattingSettings.colorSelector.linkColorSource.value.value;
+        // Assign colors to nodes
+        const nodeColorMap = {};
+        sankeyData.nodes.forEach((node) => {
+            const color = d3__WEBPACK_IMPORTED_MODULE_0__/* .schemeCategory10 */ .t55[node.index % 10];
+            node.color = color;
+            nodeColorMap[node.name] = color;
+        });
         // Draw nodes
         this.svg
             .append("g")
@@ -185,7 +182,7 @@ class Visual {
             .append("path")
             .attr("d", (0,d3_sankey__WEBPACK_IMPORTED_MODULE_4__/* ["default"] */ .A)())
             .attr("stroke-width", (d) => Math.max(1, d.width))
-            .attr("stroke", (d) => d.source.color)
+            .attr("stroke", (d) => colorSource === "source" ? d.source.color : d.target.color)
             .attr("fill", "none")
             .append("title")
             .text((d) => `${d.source.displayName} → ${d.target.displayName}\n${d.value}`);
@@ -1045,12 +1042,13 @@ function horizontalTarget(d) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   Kx: () => (/* binding */ Model),
+/* harmony export */   PA: () => (/* binding */ ItemDropdown),
 /* harmony export */   St: () => (/* binding */ CompositeCard),
 /* harmony export */   Tn: () => (/* binding */ SimpleCard),
 /* harmony export */   jF: () => (/* binding */ ToggleSwitch),
 /* harmony export */   sk: () => (/* binding */ ColorPicker)
 /* harmony export */ });
-/* unused harmony exports CardGroupEntity, Group, SimpleSlice, AlignmentGroup, NumUpDown, Slider, DatePicker, ItemDropdown, AutoDropdown, DurationPicker, ErrorRangeControl, FieldPicker, ItemFlagsSelection, AutoFlagsSelection, TextInput, TextArea, FontPicker, GradientBar, ImageUpload, ListEditor, ReadOnlyText, ShapeMapSelector, CompositeSlice, FontControl, MarginPadding, Container, ContainerItem */
+/* unused harmony exports CardGroupEntity, Group, SimpleSlice, AlignmentGroup, NumUpDown, Slider, DatePicker, AutoDropdown, DurationPicker, ErrorRangeControl, FieldPicker, ItemFlagsSelection, AutoFlagsSelection, TextInput, TextArea, FontPicker, GradientBar, ImageUpload, ListEditor, ReadOnlyText, ShapeMapSelector, CompositeSlice, FontControl, MarginPadding, Container, ContainerItem */
 /* harmony import */ var _utils_FormattingSettingsUtils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8639);
 /**
  * Powerbi utils components classes for custom visual formatting pane objects
