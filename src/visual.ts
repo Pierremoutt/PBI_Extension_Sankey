@@ -7,10 +7,15 @@ import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel
 import { FormatSettingsModel } from "./settings";
 import IVisual = powerbiVisualsApi.extensibility.visual.IVisual;
 import VisualUpdateOptions = powerbiVisualsApi.extensibility.visual.VisualUpdateOptions;
+
+import VisualObjectInstance = powerbiVisualsApi.VisualObjectInstance;
+import VisualObjectInstanceEnumeration = powerbiVisualsApi.VisualObjectInstanceEnumeration;
+import EnumerateVisualObjectInstancesOptions = powerbiVisualsApi.EnumerateVisualObjectInstancesOptions;
 import VisualConstructorOptions = powerbiVisualsApi.extensibility.visual.VisualConstructorOptions;
 import DataView = powerbiVisualsApi.DataView;
 import DataViewCategorical = powerbiVisualsApi.DataViewCategorical;
 import DataViewValueColumn = powerbiVisualsApi.DataViewValueColumn;
+import DataViewCategoryColumn = powerbiVisualsApi.DataViewCategoryColumn;
 
 import { SankeyLink, SankeyNode } from "./interface/types";
 
@@ -29,38 +34,88 @@ export class Visual implements IVisual {
     this.formattingSettingsService = new FormattingSettingsService();
   }
 
+  public enumerateObjectInstances(
+    options: EnumerateVisualObjectInstancesOptions
+  ): VisualObjectInstanceEnumeration {
+    const instances: VisualObjectInstance[] = [];
+
+    if (options.objectName === "nodeColor") {
+      const nodeColors = this.formattingSettings?.nodeColor?.nodeColors;
+
+      if (nodeColors) {
+        for (const nodeName in nodeColors) {
+          const nodeSetting = nodeColors[nodeName];
+
+          if (nodeSetting.visible) {
+            instances.push({
+              objectName: "nodeColor",
+              displayName: nodeSetting.displayName || nodeName,
+              properties: {
+                value: nodeSetting.value?.value || "#cccccc",
+              },
+              // Temporarily disable selector to test
+              selector: { id: null },
+            });
+          }
+        }
+      }
+    }
+    console.log(instances);
+    return instances;
+  }
+
   public update(options: VisualUpdateOptions): void {
-    this.formattingSettings =
-      this.formattingSettingsService.populateFormattingSettingsModel(
-        FormatSettingsModel,
-        options.dataViews?.[0]
+    console.log("Update triggered");
+    try {
+      this.formattingSettings =
+        this.formattingSettingsService.populateFormattingSettingsModel(
+          FormatSettingsModel,
+          options.dataViews?.[0]
+        );
+      const { width, height } = options.viewport;
+      this.svg.attr("width", width).attr("height", height);
+      this.svg.selectAll("*").remove(); // Clear previous renderings
+
+      const dataView: DataView = options.dataViews[0];
+      if (!dataView || !dataView.categorical) {
+        return;
+      }
+
+      const categorical: DataViewCategorical = dataView.categorical;
+      const categories = categorical.categories || [];
+      const values = categorical.values || [];
+
+      if (categories.length < 2 || values.length === 0) {
+        return;
+      }
+
+      const { nodes, links } = this.processData(categories, values);
+      // Add node-specific color settings
+      nodes.forEach((node) => {
+        this.formattingSettings.addNodeColor(node.name, node.displayName);
+      });
+
+      const { sankeyData, colorScale } = this.createSankeyLayout(
+        nodes,
+        links,
+        width,
+        height
       );
-    const width = options.viewport.width;
-    const height = options.viewport.height;
 
-    this.svg.attr("width", width).attr("height", height);
-    this.svg.selectAll("*").remove(); // Clear previous renderings
-
-    const dataView: DataView = options.dataViews[0];
-    if (!dataView || !dataView.categorical) {
-      return;
+      this.drawSankeyDiagram(sankeyData, colorScale);
+    } catch (error) {
+      console.error("Error updating visual:", error);
     }
+  }
 
-    const categorical: DataViewCategorical = dataView.categorical;
-    const categories = categorical.categories || [];
-    const values = categorical.values || [];
-
-    if (categories.length < 2 || values.length === 0) {
-      return;
-    }
-
+  private processData(
+    categories: DataViewCategoryColumn[],
+    values: DataViewValueColumn[]
+  ): { nodes: SankeyNode[]; links: SankeyLink[] } {
     const nodeMap: { [key: string]: number } = {};
     const displayNameMap: { [key: string]: string } = {};
-
     const nodes: SankeyNode[] = [];
     const links: SankeyLink[] = [];
-
-    // Step 3 node/link generation
 
     categories.forEach((category, index) => {
       const categoryValues = category.values.map(String);
@@ -94,10 +149,22 @@ export class Visual implements IVisual {
       });
     });
 
-    // Create Sankey Layout
+    return { nodes, links };
+  }
+
+  private createSankeyLayout(
+    nodes: SankeyNode[],
+    links: SankeyLink[],
+    width: number,
+    height: number
+  ): { sankeyData: any; colorScale: d3.ScaleOrdinal<string, unknown> } {
+    const nodeWidth = this.formattingSettings.nodeSettings.nodeWidth.value ?? 5;
+    const nodePadding =
+      this.formattingSettings.nodeSettings.nodePadding.value ?? 10;
+
     const sankeyLayout = sankey<SankeyNode, SankeyLink>()
-      .nodeWidth(10)
-      .nodePadding(10)
+      .nodeWidth(nodeWidth * 5)
+      .nodePadding(nodePadding)
       .extent([
         [1, 1],
         [width - 1, height - 1],
@@ -110,16 +177,68 @@ export class Visual implements IVisual {
 
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
+    sankeyData.nodes.forEach((node: any) => {
+      node.color = colorScale(node.name);
+    });
+
+    return { sankeyData, colorScale };
+  }
+
+  private drawSankeyDiagram(
+    sankeyData: any,
+    colorScale: d3.ScaleOrdinal<string, unknown>
+  ): void {
     const colorSource =
       this.formattingSettings.colorSelector.linkColorSource.value.value;
+    const colorMode = this.formattingSettings.nodeColor.colorMode.value.value;
+    const fixedColor = this.formattingSettings.nodeColor.fixedColor.value.value;
+    const paletteColor1 =
+      this.formattingSettings.nodeColor.paletteColor1.value.value;
+    const paletteColor2 =
+      this.formattingSettings.nodeColor.paletteColor2.value.value;
 
-    // Assign colors to nodes
-    const nodeColorMap: { [key: string]: string } = {};
+    // Assign colors to nodes based on the selected color mode
     sankeyData.nodes.forEach((node: any) => {
-      const color = d3.schemeCategory10[node.index % 10];
-      node.color = color;
-      nodeColorMap[node.name] = color;
+      switch (colorMode) {
+        case "fixed":
+          node.color = fixedColor;
+          break;
+        case "byCategory":
+          node.color = colorScale(node.name);
+          break;
+        case "byValue":
+          const nodeColorSetting =
+            this.formattingSettings.nodeColor.nodeColors[node.name];
+          if (nodeColorSetting) {
+            node.color = nodeColorSetting.value.value;
+            // console.log(`Assigned color ${node.color} to node ${node.name}`);
+          } else {
+            node.color = colorScale(node.name);
+          }
+          const setting =
+            this.formattingSettings.nodeColor.nodeColors[node.name];
+          console.log(
+            `Rendering node '${node.name}' with color:`,
+            setting?.value?.value
+          );
+
+          if (setting && setting.value?.value) {
+            node.color = setting.value.value;
+          } else {
+            node.color = colorScale(node.name);
+          }
+          break;
+        case "customPalette":
+          node.color = node.name.includes("Category1")
+            ? paletteColor1
+            : paletteColor2;
+          break;
+        default:
+          node.color = colorScale(node.name);
+      }
     });
+
+    this.formattingSettings.updateVisibility();
 
     // Draw nodes
     this.svg
@@ -132,24 +251,21 @@ export class Visual implements IVisual {
       .attr("y", (d: any) => (isNaN(d.y0) ? 0 : d.y0))
       .attr("height", (d: any) => (isNaN(d.y1 - d.y0) ? 0 : d.y1 - d.y0))
       .attr("width", (d: any) => (isNaN(d.x1 - d.x0) ? 0 : d.x1 - d.x0))
-
-      .style("fill", (d: any) => (d.color = colorScale(d.name))) // Assign color using colorScale
+      .style("fill", (d: any) => d.color)
       .style("stroke", "black");
 
     // Draw links
     this.svg
       .append("g")
       .selectAll("path")
-      .data(sankeyData.links as SankeyLink[]) // Explicitly cast links
+      .data(sankeyData.links as SankeyLink[])
       .enter()
       .append("path")
       .attr("d", sankeyLinkHorizontal<SankeyNode, SankeyLink>())
       .attr("stroke-width", (d: SankeyLink) => Math.max(1, d.width!))
-
       .attr("stroke", (d: any) =>
         colorSource === "source" ? d.source.color : d.target.color
       )
-
       .attr("fill", "none")
       .append("title")
       .text(
@@ -159,6 +275,7 @@ export class Visual implements IVisual {
           }\n${d.value}`
       );
 
+    // Draw labels
     this.svg
       .append("g")
       .selectAll("text")
@@ -172,6 +289,7 @@ export class Visual implements IVisual {
       .style("font-size", "10px")
       .style("fill", "#333");
   }
+
   public getFormattingModel(): powerbi.visuals.FormattingModel {
     return this.formattingSettingsService.buildFormattingModel(
       this.formattingSettings

@@ -64,6 +64,53 @@
           }
         }
       }
+    },
+
+    "nodeSettings": {
+      "displayName": "Nodes",
+      "properties": {
+        "nodeWidth": {
+          "displayName": "Width",
+          "type": {
+            "numeric": true
+          }
+        },
+        "nodePadding": {
+          "displayName": "Padding",
+          "type": {
+            "numeric": true
+          }
+        }
+      }
+    },
+
+    "nodeColorSettings": {
+      "displayName": "Node Color Mode",
+      "properties": {
+        "colorMode": {
+          "displayName": "Color Mode",
+          "type": {
+            "enumeration": [
+              { "value": "fixed", "displayName": "Fixed Color" },
+              { "value": "byCategory", "displayName": "By Category" },
+              { "value": "byValue", "displayName": "By Value" },
+              { "value": "customPalette", "displayName": "Custom Palette" }
+            ]
+          }
+        },
+        "fixedColor": {
+          "displayName": "Fixed Node Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "paletteColor1": {
+          "displayName": "Custom Palette Color 1",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "paletteColor2": {
+          "displayName": "Custom Palette Color 2",
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
     }
   }
 }

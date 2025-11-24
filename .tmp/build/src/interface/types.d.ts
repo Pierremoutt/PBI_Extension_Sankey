@@ -7,6 +7,8 @@ export interface SankeyNode {
     y1?: number;
     index?: number;
     value?: number;
+    color?: string;
+    category?: string;
 }
 export interface SankeyLink {
     source: SankeyNode | number;

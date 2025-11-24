@@ -16,6 +16,7 @@ var Model = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/*
 var ColorPicker = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.ColorPicker */ .z.sk;
 var ToggleSwitch = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.ToggleSwitch */ .z.jF;
 var Dropdown = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.ItemDropdown */ .z.PA;
+var NumUpDown = powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_0__/* .formattingSettings.NumUpDown */ .z.iB;
 /**
  * Enable Axis Formatting Card
  */
@@ -53,11 +54,122 @@ class ColorSelectorCardSettings extends Card {
     // slices will be populated in barChart settings model `populateColorSelector` method
     slices = [this.linkColorSource];
 }
+class NodesCardSettings extends Card {
+    nodeWidth = new NumUpDown({
+        name: "nodeWidth",
+        displayName: "Node Width",
+        value: 5, // valeur par défaut
+    });
+    nodePadding = new NumUpDown({
+        name: "nodePadding",
+        displayName: "Node Padding",
+        value: 5, // valeur par défaut
+    });
+    name = "nodeSettings";
+    displayName = "Nodes";
+    slices = [this.nodeWidth, this.nodePadding];
+}
+class NodeColorCardSettings extends Card {
+    colorMode = new Dropdown({
+        name: "colorMode",
+        displayName: "Node Color Mode",
+        value: { displayName: "By Category", value: "byCategory" },
+        items: [
+            { displayName: "Fixed", value: "fixed" },
+            { displayName: "By Category", value: "byCategory" },
+            { displayName: "By Value", value: "byValue" },
+            { displayName: "Custom Palette", value: "customPalette" },
+        ],
+    });
+    fixedColor = new ColorPicker({
+        name: "fixedColor",
+        displayName: "Fixed Node Color",
+        value: { value: "#1f77b4" },
+        visible: false,
+    });
+    paletteColor1 = new ColorPicker({
+        name: "paletteColor1",
+        displayName: "Color 1",
+        value: { value: "#ff0000" },
+        visible: false,
+    });
+    paletteColor2 = new ColorPicker({
+        name: "paletteColor2",
+        displayName: "Color 2",
+        value: { value: "#00ff00" },
+        visible: false,
+    });
+    nodeColors = {};
+    name = "nodeColorSettings";
+    displayName = "Node Colors";
+    slices = [
+        this.colorMode,
+        this.fixedColor,
+        this.paletteColor1,
+        this.paletteColor2,
+        ...Object.values(this.nodeColors),
+    ];
+    // addNodeColor(
+    //   nodeName: string,
+    //   displayName: string,
+    //   defaultColor: string = "#000000"
+    // ) {
+    //   if (!this.nodeColors[nodeName]) {
+    //     const colorPicker = new ColorPicker({
+    //       name: nodeName, // important : identifiant unique
+    //       displayName: displayName,
+    //       value: { value: defaultColor },
+    //       visible: true,
+    //     });
+    //     this.nodeColors[nodeName] = colorPicker;
+    //     // Ajout dans slices pour que Power BI l'affiche
+    //     this.slices.push(colorPicker);
+    //     // // Optionnel : exposer aussi comme propriété directe si nécessaire
+    //     // (this as any)[nodeName] = colorPicker;
+    //   }
+    // }
+    addNodeColor(nodeName, displayName, storedColor = "#000000") {
+        if (!this.nodeColors[nodeName]) {
+            const colorPicker = new ColorPicker({
+                name: nodeName,
+                displayName: displayName,
+                value: { value: storedColor },
+                visible: true,
+            });
+            this.nodeColors[nodeName] = colorPicker;
+            this.slices.push(colorPicker);
+        }
+    }
+}
 class FormatSettingsModel extends Model {
-    // Create formatting settings model formatting cards
     enableAxis = new EnableAxisCardSettings();
     colorSelector = new ColorSelectorCardSettings();
-    cards = [this.enableAxis, this.colorSelector];
+    nodeSettings = new NodesCardSettings();
+    nodeColor = new NodeColorCardSettings();
+    cards = [
+        this.enableAxis,
+        this.colorSelector,
+        this.nodeSettings,
+        this.nodeColor,
+    ];
+    updateVisibility() {
+        const colorMode = this.nodeColor.colorMode.value.value;
+        this.nodeColor.fixedColor.visible = colorMode === "fixed";
+        this.nodeColor.paletteColor1.visible = colorMode === "customPalette";
+        this.nodeColor.paletteColor2.visible = colorMode === "customPalette";
+        const showNodeColors = colorMode === "byValue";
+        for (const nodeName in this.nodeColor.nodeColors) {
+            this.nodeColor.nodeColors[nodeName].visible = showNodeColors;
+        }
+    }
+    addNodeColor(nodeName, displayName, defaultColor = "#000000") {
+        const existing = this.nodeColor.nodeColors[nodeName];
+        const storedColor = existing?.value?.value ?? defaultColor;
+        // Only add if not already present
+        if (!existing) {
+            this.nodeColor.addNodeColor(nodeName, displayName, storedColor);
+        }
+    }
 }
 
 
@@ -91,28 +203,65 @@ class Visual {
             .classed("sankeyDiagram", true);
         this.formattingSettingsService = new powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_1__/* .FormattingSettingsService */ .O();
     }
+    enumerateObjectInstances(options) {
+        const instances = [];
+        if (options.objectName === "nodeColor") {
+            const nodeColors = this.formattingSettings?.nodeColor?.nodeColors;
+            if (nodeColors) {
+                for (const nodeName in nodeColors) {
+                    const nodeSetting = nodeColors[nodeName];
+                    if (nodeSetting.visible) {
+                        instances.push({
+                            objectName: "nodeColor",
+                            displayName: nodeSetting.displayName || nodeName,
+                            properties: {
+                                value: nodeSetting.value?.value || "#cccccc",
+                            },
+                            // Temporarily disable selector to test
+                            selector: { id: null },
+                        });
+                    }
+                }
+            }
+        }
+        console.log(instances);
+        return instances;
+    }
     update(options) {
-        this.formattingSettings =
-            this.formattingSettingsService.populateFormattingSettingsModel(_settings__WEBPACK_IMPORTED_MODULE_2__/* .FormatSettingsModel */ .Y, options.dataViews?.[0]);
-        const width = options.viewport.width;
-        const height = options.viewport.height;
-        this.svg.attr("width", width).attr("height", height);
-        this.svg.selectAll("*").remove(); // Clear previous renderings
-        const dataView = options.dataViews[0];
-        if (!dataView || !dataView.categorical) {
-            return;
+        console.log("Update triggered");
+        try {
+            this.formattingSettings =
+                this.formattingSettingsService.populateFormattingSettingsModel(_settings__WEBPACK_IMPORTED_MODULE_2__/* .FormatSettingsModel */ .Y, options.dataViews?.[0]);
+            const { width, height } = options.viewport;
+            this.svg.attr("width", width).attr("height", height);
+            this.svg.selectAll("*").remove(); // Clear previous renderings
+            const dataView = options.dataViews[0];
+            if (!dataView || !dataView.categorical) {
+                return;
+            }
+            const categorical = dataView.categorical;
+            const categories = categorical.categories || [];
+            const values = categorical.values || [];
+            if (categories.length < 2 || values.length === 0) {
+                return;
+            }
+            const { nodes, links } = this.processData(categories, values);
+            // Add node-specific color settings
+            nodes.forEach((node) => {
+                this.formattingSettings.addNodeColor(node.name, node.displayName);
+            });
+            const { sankeyData, colorScale } = this.createSankeyLayout(nodes, links, width, height);
+            this.drawSankeyDiagram(sankeyData, colorScale);
         }
-        const categorical = dataView.categorical;
-        const categories = categorical.categories || [];
-        const values = categorical.values || [];
-        if (categories.length < 2 || values.length === 0) {
-            return;
+        catch (error) {
+            console.error("Error updating visual:", error);
         }
+    }
+    processData(categories, values) {
         const nodeMap = {};
         const displayNameMap = {};
         const nodes = [];
         const links = [];
-        // Step 3 node/link generation
         categories.forEach((category, index) => {
             const categoryValues = category.values.map(String);
             categoryValues.forEach((value, i) => {
@@ -139,10 +288,14 @@ class Visual {
                 }
             });
         });
-        // Create Sankey Layout
+        return { nodes, links };
+    }
+    createSankeyLayout(nodes, links, width, height) {
+        const nodeWidth = this.formattingSettings.nodeSettings.nodeWidth.value ?? 5;
+        const nodePadding = this.formattingSettings.nodeSettings.nodePadding.value ?? 10;
         const sankeyLayout = (0,d3_sankey__WEBPACK_IMPORTED_MODULE_3__/* ["default"] */ .A)()
-            .nodeWidth(10)
-            .nodePadding(10)
+            .nodeWidth(nodeWidth * 5)
+            .nodePadding(nodePadding)
             .extent([
             [1, 1],
             [width - 1, height - 1],
@@ -152,14 +305,54 @@ class Visual {
             links: links.map((d) => Object.assign({}, d)),
         });
         const colorScale = d3__WEBPACK_IMPORTED_MODULE_0__/* .scaleOrdinal */ .UMr(d3__WEBPACK_IMPORTED_MODULE_0__/* .schemeCategory10 */ .t55);
-        const colorSource = this.formattingSettings.colorSelector.linkColorSource.value.value;
-        // Assign colors to nodes
-        const nodeColorMap = {};
         sankeyData.nodes.forEach((node) => {
-            const color = d3__WEBPACK_IMPORTED_MODULE_0__/* .schemeCategory10 */ .t55[node.index % 10];
-            node.color = color;
-            nodeColorMap[node.name] = color;
+            node.color = colorScale(node.name);
         });
+        return { sankeyData, colorScale };
+    }
+    drawSankeyDiagram(sankeyData, colorScale) {
+        const colorSource = this.formattingSettings.colorSelector.linkColorSource.value.value;
+        const colorMode = this.formattingSettings.nodeColor.colorMode.value.value;
+        const fixedColor = this.formattingSettings.nodeColor.fixedColor.value.value;
+        const paletteColor1 = this.formattingSettings.nodeColor.paletteColor1.value.value;
+        const paletteColor2 = this.formattingSettings.nodeColor.paletteColor2.value.value;
+        // Assign colors to nodes based on the selected color mode
+        sankeyData.nodes.forEach((node) => {
+            switch (colorMode) {
+                case "fixed":
+                    node.color = fixedColor;
+                    break;
+                case "byCategory":
+                    node.color = colorScale(node.name);
+                    break;
+                case "byValue":
+                    const nodeColorSetting = this.formattingSettings.nodeColor.nodeColors[node.name];
+                    if (nodeColorSetting) {
+                        node.color = nodeColorSetting.value.value;
+                        // console.log(`Assigned color ${node.color} to node ${node.name}`);
+                    }
+                    else {
+                        node.color = colorScale(node.name);
+                    }
+                    const setting = this.formattingSettings.nodeColor.nodeColors[node.name];
+                    console.log(`Rendering node '${node.name}' with color:`, setting?.value?.value);
+                    if (setting && setting.value?.value) {
+                        node.color = setting.value.value;
+                    }
+                    else {
+                        node.color = colorScale(node.name);
+                    }
+                    break;
+                case "customPalette":
+                    node.color = node.name.includes("Category1")
+                        ? paletteColor1
+                        : paletteColor2;
+                    break;
+                default:
+                    node.color = colorScale(node.name);
+            }
+        });
+        this.formattingSettings.updateVisibility();
         // Draw nodes
         this.svg
             .append("g")
@@ -171,13 +364,13 @@ class Visual {
             .attr("y", (d) => (isNaN(d.y0) ? 0 : d.y0))
             .attr("height", (d) => (isNaN(d.y1 - d.y0) ? 0 : d.y1 - d.y0))
             .attr("width", (d) => (isNaN(d.x1 - d.x0) ? 0 : d.x1 - d.x0))
-            .style("fill", (d) => (d.color = colorScale(d.name))) // Assign color using colorScale
+            .style("fill", (d) => d.color)
             .style("stroke", "black");
         // Draw links
         this.svg
             .append("g")
             .selectAll("path")
-            .data(sankeyData.links) // Explicitly cast links
+            .data(sankeyData.links)
             .enter()
             .append("path")
             .attr("d", (0,d3_sankey__WEBPACK_IMPORTED_MODULE_4__/* ["default"] */ .A)())
@@ -186,6 +379,7 @@ class Visual {
             .attr("fill", "none")
             .append("title")
             .text((d) => `${d.source.displayName} → ${d.target.displayName}\n${d.value}`);
+        // Draw labels
         this.svg
             .append("g")
             .selectAll("text")
@@ -1045,10 +1239,11 @@ function horizontalTarget(d) {
 /* harmony export */   PA: () => (/* binding */ ItemDropdown),
 /* harmony export */   St: () => (/* binding */ CompositeCard),
 /* harmony export */   Tn: () => (/* binding */ SimpleCard),
+/* harmony export */   iB: () => (/* binding */ NumUpDown),
 /* harmony export */   jF: () => (/* binding */ ToggleSwitch),
 /* harmony export */   sk: () => (/* binding */ ColorPicker)
 /* harmony export */ });
-/* unused harmony exports CardGroupEntity, Group, SimpleSlice, AlignmentGroup, NumUpDown, Slider, DatePicker, AutoDropdown, DurationPicker, ErrorRangeControl, FieldPicker, ItemFlagsSelection, AutoFlagsSelection, TextInput, TextArea, FontPicker, GradientBar, ImageUpload, ListEditor, ReadOnlyText, ShapeMapSelector, CompositeSlice, FontControl, MarginPadding, Container, ContainerItem */
+/* unused harmony exports CardGroupEntity, Group, SimpleSlice, AlignmentGroup, Slider, DatePicker, AutoDropdown, DurationPicker, ErrorRangeControl, FieldPicker, ItemFlagsSelection, AutoFlagsSelection, TextInput, TextArea, FontPicker, GradientBar, ImageUpload, ListEditor, ReadOnlyText, ShapeMapSelector, CompositeSlice, FontControl, MarginPadding, Container, ContainerItem */
 /* harmony import */ var _utils_FormattingSettingsUtils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8639);
 /**
  * Powerbi utils components classes for custom visual formatting pane objects
