@@ -1,3 +1,4 @@
+import powerbi from "powerbi-visuals-api";
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 import Card = formattingSettings.SimpleCard;
 import Model = formattingSettings.Model;
@@ -42,7 +43,7 @@ declare class NodeColorCardSettings extends Card {
     name: string;
     displayName: string;
     slices: Slice[];
-    addNodeColor(nodeName: string, displayName: string, storedColor?: string): void;
+    addNodeColor(nodeName: string, displayName: string, selectionId: powerbi.visuals.ISelectionId, savedColor: string): void;
 }
 export declare class FormatSettingsModel extends Model {
     enableAxis: EnableAxisCardSettings;
@@ -51,6 +52,6 @@ export declare class FormatSettingsModel extends Model {
     nodeColor: NodeColorCardSettings;
     cards: Card[];
     updateVisibility(): void;
-    addNodeColor(nodeName: string, displayName: string, defaultColor?: string): void;
+    addNodeColor(nodeName: string, displayName: string, selectionId: powerbi.visuals.ISelectionId, savedColor: string): void;
 }
 export {};

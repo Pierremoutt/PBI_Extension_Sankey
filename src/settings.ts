@@ -1,3 +1,4 @@
+import powerbi from "powerbi-visuals-api";
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 
 import Card = formattingSettings.SimpleCard;
@@ -115,44 +116,24 @@ class NodeColorCardSettings extends Card {
     this.fixedColor,
     this.paletteColor1,
     this.paletteColor2,
-
-    ...Object.values(this.nodeColors),
   ];
 
-  // addNodeColor(
-  //   nodeName: string,
-  //   displayName: string,
-  //   defaultColor: string = "#000000"
-  // ) {
-  //   if (!this.nodeColors[nodeName]) {
-  //     const colorPicker = new ColorPicker({
-  //       name: nodeName, // important : identifiant unique
-  //       displayName: displayName,
-  //       value: { value: defaultColor },
-  //       visible: true,
-  //     });
-
-  //     this.nodeColors[nodeName] = colorPicker;
-
-  //     // Ajout dans slices pour que Power BI l'affiche
-  //     this.slices.push(colorPicker);
-
-  //     // // Optionnel : exposer aussi comme propriété directe si nécessaire
-  //     // (this as any)[nodeName] = colorPicker;
-  //   }
-  // }
   addNodeColor(
     nodeName: string,
     displayName: string,
-    storedColor: string = "#000000"
+    selectionId: powerbi.visuals.ISelectionId,
+    savedColor: string
   ) {
+    // Only add if it doesn't exist
     if (!this.nodeColors[nodeName]) {
       const colorPicker = new ColorPicker({
-        name: nodeName,
+        name: "fill",
         displayName: displayName,
-        value: { value: storedColor },
+        value: { value: savedColor || "#cccccc" },
+        selector: selectionId.getSelector(),
         visible: true,
-      });
+        uid: nodeName,
+      } as any);
 
       this.nodeColors[nodeName] = colorPicker;
       this.slices.push(colorPicker);
@@ -189,14 +170,10 @@ export class FormatSettingsModel extends Model {
   addNodeColor(
     nodeName: string,
     displayName: string,
-    defaultColor: string = "#000000"
+    selectionId: powerbi.visuals.ISelectionId,
+    savedColor: string
+    // defaultColor: string = "#000000"
   ) {
-    const existing = this.nodeColor.nodeColors[nodeName];
-    const storedColor = existing?.value?.value ?? defaultColor;
-
-    // Only add if not already present
-    if (!existing) {
-      this.nodeColor.addNodeColor(nodeName, displayName, storedColor);
-    }
+    this.nodeColor.addNodeColor(nodeName, displayName, selectionId, savedColor);
   }
 }

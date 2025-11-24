@@ -107,34 +107,17 @@ class NodeColorCardSettings extends Card {
         this.fixedColor,
         this.paletteColor1,
         this.paletteColor2,
-        ...Object.values(this.nodeColors),
     ];
-    // addNodeColor(
-    //   nodeName: string,
-    //   displayName: string,
-    //   defaultColor: string = "#000000"
-    // ) {
-    //   if (!this.nodeColors[nodeName]) {
-    //     const colorPicker = new ColorPicker({
-    //       name: nodeName, // important : identifiant unique
-    //       displayName: displayName,
-    //       value: { value: defaultColor },
-    //       visible: true,
-    //     });
-    //     this.nodeColors[nodeName] = colorPicker;
-    //     // Ajout dans slices pour que Power BI l'affiche
-    //     this.slices.push(colorPicker);
-    //     // // Optionnel : exposer aussi comme propriété directe si nécessaire
-    //     // (this as any)[nodeName] = colorPicker;
-    //   }
-    // }
-    addNodeColor(nodeName, displayName, storedColor = "#000000") {
+    addNodeColor(nodeName, displayName, selectionId, savedColor) {
+        // Only add if it doesn't exist
         if (!this.nodeColors[nodeName]) {
             const colorPicker = new ColorPicker({
-                name: nodeName,
+                name: "fill",
                 displayName: displayName,
-                value: { value: storedColor },
+                value: { value: savedColor || "#cccccc" },
+                selector: selectionId.getSelector(),
                 visible: true,
+                uid: nodeName,
             });
             this.nodeColors[nodeName] = colorPicker;
             this.slices.push(colorPicker);
@@ -162,13 +145,10 @@ class FormatSettingsModel extends Model {
             this.nodeColor.nodeColors[nodeName].visible = showNodeColors;
         }
     }
-    addNodeColor(nodeName, displayName, defaultColor = "#000000") {
-        const existing = this.nodeColor.nodeColors[nodeName];
-        const storedColor = existing?.value?.value ?? defaultColor;
-        // Only add if not already present
-        if (!existing) {
-            this.nodeColor.addNodeColor(nodeName, displayName, storedColor);
-        }
+    addNodeColor(nodeName, displayName, selectionId, savedColor
+    // defaultColor: string = "#000000"
+    ) {
+        this.nodeColor.addNodeColor(nodeName, displayName, selectionId, savedColor);
     }
 }
 
@@ -196,37 +176,48 @@ class Visual {
     svg;
     formattingSettings;
     formattingSettingsService;
+    host;
     constructor(options) {
+        this.host = options.host;
         this.target = options.element;
         this.svg = d3__WEBPACK_IMPORTED_MODULE_0__/* .select */ .Ltv(this.target)
             .append("svg")
             .classed("sankeyDiagram", true);
         this.formattingSettingsService = new powerbi_visuals_utils_formattingmodel__WEBPACK_IMPORTED_MODULE_1__/* .FormattingSettingsService */ .O();
     }
-    enumerateObjectInstances(options) {
-        const instances = [];
-        if (options.objectName === "nodeColor") {
-            const nodeColors = this.formattingSettings?.nodeColor?.nodeColors;
-            if (nodeColors) {
-                for (const nodeName in nodeColors) {
-                    const nodeSetting = nodeColors[nodeName];
-                    if (nodeSetting.visible) {
-                        instances.push({
-                            objectName: "nodeColor",
-                            displayName: nodeSetting.displayName || nodeName,
-                            properties: {
-                                value: nodeSetting.value?.value || "#cccccc",
-                            },
-                            // Temporarily disable selector to test
-                            selector: { id: null },
-                        });
-                    }
-                }
-            }
-        }
-        console.log(instances);
-        return instances;
-    }
+    // public enumerateObjectInstances(
+    //   options: EnumerateVisualObjectInstancesOptions
+    // ): VisualObjectInstanceEnumeration {
+    //   const instances: VisualObjectInstance[] = [];
+    //   if (options.objectName === "nodeColor") {
+    //     const nodeColors = this.formattingSettings?.nodeColor?.nodeColors;
+    //     if (nodeColors) {
+    //       for (const nodeName in nodeColors) {
+    //         const nodeSetting = nodeColors[nodeName];
+    //         if (nodeSetting.visible) {
+    //           instances.push({
+    //             objectName: "nodeColor",
+    //             displayName: nodeSetting.displayName || nodeName,
+    //             properties: {
+    //               value: nodeSetting.value?.value || "#cccccc",
+    //             },
+    //             selector: {
+    //               data: [
+    //                 {
+    //                   name: "displayName", // The name of the field/identity property
+    //                   kind: powerbiVisualsApi.VisualDataChangeType.Values, // Or Categories, depending on your data view structure
+    //                   value: nodeSetting.displayName, // The actual value of the data point (e.g., "A", "B", "C")
+    //                 },
+    //               ],
+    //             },
+    //           });
+    //         }
+    //       }
+    //     }
+    //   }
+    //   console.log(instances);
+    //   return instances;
+    // }
     update(options) {
         console.log("Update triggered");
         try {
@@ -248,10 +239,11 @@ class Visual {
             const { nodes, links } = this.processData(categories, values);
             // Add node-specific color settings
             nodes.forEach((node) => {
-                this.formattingSettings.addNodeColor(node.name, node.displayName);
+                this.formattingSettings.addNodeColor(node.name, node.displayName, node.selectionId, node.savedColor);
             });
             const { sankeyData, colorScale } = this.createSankeyLayout(nodes, links, width, height);
             this.drawSankeyDiagram(sankeyData, colorScale);
+            console.log("Formatting Model:", this.formattingSettingsService.buildFormattingModel(this.formattingSettings));
         }
         catch (error) {
             console.error("Error updating visual:", error);
@@ -266,11 +258,32 @@ class Visual {
             const categoryValues = category.values.map(String);
             categoryValues.forEach((value, i) => {
                 const sourceKey = `${value}__${index}`;
+                // -------------------------------------------------------
+                // 1. PROCESS SOURCE NODE
+                // -------------------------------------------------------
                 if (!(sourceKey in nodeMap)) {
                     nodeMap[sourceKey] = nodes.length;
                     displayNameMap[sourceKey] = value;
-                    nodes.push({ name: sourceKey, displayName: value });
+                    const selectionId = this.host
+                        .createSelectionIdBuilder()
+                        .withCategory(category, i)
+                        .createSelectionId();
+                    const objects = category.objects?.[i];
+                    const savedColor = objects &&
+                        objects["nodeColorSettings"] &&
+                        objects["nodeColorSettings"]["fill"]
+                        ? objects["nodeColorSettings"]["fill"].solid.color
+                        : null;
+                    nodes.push({
+                        name: sourceKey,
+                        displayName: value,
+                        selectionId: selectionId,
+                        savedColor: savedColor,
+                    });
                 }
+                // -------------------------------------------------------
+                // 2. PROCESS TARGET NODE
+                // -------------------------------------------------------
                 if (index < categories.length - 1) {
                     const nextCategoryValues = categories[index + 1].values.map(String);
                     const targetValue = nextCategoryValues[i];
@@ -278,13 +291,45 @@ class Visual {
                     if (!(targetKey in nodeMap)) {
                         nodeMap[targetKey] = nodes.length;
                         displayNameMap[targetKey] = targetValue;
-                        nodes.push({ name: targetKey, displayName: targetValue });
+                        const targetSelectionId = this.host
+                            .createSelectionIdBuilder()
+                            .withCategory(categories[index + 1], i)
+                            .createSelectionId();
+                        const targetObjects = categories[index + 1].objects?.[i];
+                        const targetSavedColor = targetObjects &&
+                            targetObjects["nodeColorSettings"] &&
+                            targetObjects["nodeColorSettings"]["fill"]
+                            ? targetObjects["nodeColorSettings"]["fill"].solid
+                                .color
+                            : null;
+                        nodes.push({
+                            name: targetKey,
+                            displayName: targetValue,
+                            selectionId: targetSelectionId,
+                            savedColor: targetSavedColor,
+                        });
                     }
-                    links.push({
-                        source: nodeMap[sourceKey],
-                        target: nodeMap[targetKey],
-                        value: values[0].values[i] || 1,
-                    });
+                    // -------------------------------------------------------
+                    // 3. PROCESS LINKS
+                    // -------------------------------------------------------
+                    const sourceIndex = nodeMap[sourceKey];
+                    const targetIndex = nodeMap[targetKey];
+                    const linkValue = values[0].values[i] || 0;
+                    // Check if this link already exists in our array
+                    const existingLink = links.find((l) => l.source === sourceIndex && l.target === targetIndex);
+                    if (existingLink) {
+                        // Aggregate: Add value to existing link
+                        existingLink.value += linkValue;
+                    }
+                    else {
+                        // Create new link
+                        links.push({
+                            source: sourceIndex,
+                            target: targetIndex,
+                            value: linkValue,
+                            // You can also add an ID here if you want link coloring later
+                        });
+                    }
                 }
             });
         });

@@ -109,6 +109,16 @@
         "paletteColor2": {
           "displayName": "Custom Palette Color 2",
           "type": { "fill": { "solid": { "color": true } } }
+        },
+        "fill": {
+          "displayName": "Node Fill Color",
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
         }
       }
     }

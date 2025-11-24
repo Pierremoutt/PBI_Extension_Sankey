@@ -1,3 +1,4 @@
+import powerbi from "powerbi-visuals-api";
 export interface SankeyNode {
     name: string;
     displayName?: string;
@@ -9,6 +10,8 @@ export interface SankeyNode {
     value?: number;
     color?: string;
     category?: string;
+    selectionId?: powerbi.visuals.ISelectionId;
+    savedColor?: string;
 }
 export interface SankeyLink {
     source: SankeyNode | number;
