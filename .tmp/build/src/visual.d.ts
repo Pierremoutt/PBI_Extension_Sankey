@@ -7,7 +7,11 @@ export declare class Visual implements IVisual {
     private svg;
     private formattingSettings;
     private formattingSettingsService;
+    private host;
     constructor(options: VisualConstructorOptions);
     update(options: VisualUpdateOptions): void;
+    private processData;
+    private createSankeyLayout;
+    private drawSankeyDiagram;
     getFormattingModel(): powerbi.visuals.FormattingModel;
 }

@@ -1,3 +1,5 @@
+import powerbi from "powerbi-visuals-api";
+
 export interface SankeyNode {
   name: string;
   displayName?: string; // clean label for U
@@ -7,6 +9,10 @@ export interface SankeyNode {
   y1?: number;
   index?: number;
   value?: number;
+  color?: string;
+  category?: string;
+  selectionId?: powerbi.visuals.ISelectionId;
+  savedColor?: string;
 }
 
 export interface SankeyLink {

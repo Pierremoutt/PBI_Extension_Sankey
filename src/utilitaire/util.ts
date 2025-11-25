@@ -1,9 +1,10 @@
 import { SankeyLink, SankeyNode } from "../interface/types";
+import powerbiVisualsApi from "powerbi-visuals-api";
 
 export function sanitizeSankeyData(
   rawNodes: SankeyNode[],
   rawLinks: SankeyLink[]
-): { nodes: SankeyNode[]; links: SankeyLink[] } {
+): { nodes: SankeyNode[]; links: SankeyLink[] } | undefined {
   const nodeMap = new Map<string, number>();
   const nodes: SankeyNode[] = [];
   const links: SankeyLink[] = [];
@@ -75,4 +76,19 @@ export function sanitizeSankeyData(
   }
 
   return { nodes, links };
+}
+export function getValue<T>(
+  objects: powerbi.DataViewObjects,
+  objectName: string,
+  propertyName: string,
+  defaultValue: T
+): T {
+  if (
+    objects &&
+    objects[objectName] &&
+    objects[objectName][propertyName] !== undefined
+  ) {
+    return <T>objects[objectName][propertyName];
+  }
+  return defaultValue;
 }

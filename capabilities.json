@@ -57,20 +57,67 @@
     },
     "colorSelector": {
       "properties": {
-        "linkColorMode": {
-          "displayName": "Links Color",
-          "description": "Choose whether link color is based on source or target node.",
+        "linkColorSource": {
+          "displayName": "Link Color Source",
+          "type": {
+            "enumeration": [{ "value": "source" }, { "value": "target" }]
+          }
+        }
+      }
+    },
+
+    "nodeSettings": {
+      "displayName": "Nodes",
+      "properties": {
+        "nodeWidth": {
+          "displayName": "Width",
+          "type": {
+            "numeric": true
+          }
+        },
+        "nodePadding": {
+          "displayName": "Padding",
+          "type": {
+            "numeric": true
+          }
+        }
+      }
+    },
+
+    "nodeColorSettings": {
+      "displayName": "Node Color Mode",
+      "properties": {
+        "colorMode": {
+          "displayName": "Color Mode",
           "type": {
             "enumeration": [
-              {
-                "displayName": "Source",
-                "value": "source"
-              },
-              {
-                "displayName": "Target",
-                "value": "target"
-              }
+              { "value": "fixed", "displayName": "Fixed Color" },
+              { "value": "byCategory", "displayName": "By Category" },
+              { "value": "byValue", "displayName": "By Value" },
+              { "value": "customPalette", "displayName": "Custom Palette" }
             ]
+          }
+        },
+        "fixedColor": {
+          "displayName": "Fixed Node Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "paletteColor1": {
+          "displayName": "Custom Palette Color 1",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "paletteColor2": {
+          "displayName": "Custom Palette Color 2",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "fill": {
+          "displayName": "Node Fill Color",
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
           }
         }
       }
