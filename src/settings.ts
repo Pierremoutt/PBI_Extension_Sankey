@@ -47,7 +47,6 @@ class ColorSelectorCardSettings extends Card {
   name: string = "colorSelector";
   displayName: string = "Data Colors";
 
-  // slices will be populated in barChart settings model `populateColorSelector` method
   slices: Slice[] = [this.linkColorSource];
 }
 
@@ -134,7 +133,8 @@ class NodeColorCardSettings extends Card {
         visible: true,
         uid: nodeName,
       } as any);
-
+      console.log(`Node: ${nodeName}`);
+      console.log(`ID Fingerprint:`, JSON.stringify(selectionId.getSelector()));
       this.nodeColors[nodeName] = colorPicker;
       this.slices.push(colorPicker);
     }

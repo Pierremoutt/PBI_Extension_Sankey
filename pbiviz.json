@@ -1,16 +1,16 @@
 {
   "visual": {
-    "name": "visual1",
-    "displayName": "visual_1",
+    "name": "Sankey_PLG",
+    "displayName": "Sankey PLG",
     "guid": "visual135856BF5181B4672807979D34CE8AD09",
     "visualClassName": "Visual",
     "version": "1.0.0.0",
-    "description": "tentative of Sankey",
-    "supportUrl": "test.com",
-    "gitHubUrl": ""
+    "description": "Multi categories Sankey",
+    "supportUrl": "https://community.powerbi.com",
+    "gitHubUrl": "https://github.com/Pierremoutt/PBI_Extension_Sankey"
   },
   "apiVersion": "5.3.0",
-  "author": { "name": "PLG", "email": "legarspierre@gmail.com" },
+  "author": { "name": "Pierre Le Garsmeur", "email": "legarspierre@gmail.com" },
   "assets": { "icon": "assets/icon.png" },
   "externalJS": null,
   "style": "style/visual.less",
