@@ -9,31 +9,45 @@ import ToggleSwitch = formattingSettings.ToggleSwitch;
 import Dropdown = formattingSettings.ItemDropdown;
 import NumUpDown = formattingSettings.NumUpDown;
 
-/**
- * Enable Axis Formatting Card
- */
-class EnableAxisCardSettings extends Card {
+// --- 1. Settings pour les En-têtes de colonnes (Nouveau) ---
+class ColumnHeadersCardSettings extends Card {
   show = new ToggleSwitch({
     name: "show",
-    displayName: undefined,
-    value: false,
+    displayName: "Show Headers",
+    value: true,
   });
 
-  fill = new ColorPicker({
-    name: "fill",
-    displayName: "Color",
-    value: { value: "#000000" },
+  fontColor = new ColorPicker({
+    name: "fontColor",
+    displayName: "Font Color",
+    value: { value: "#333333" },
   });
-  topLevelSlice: ToggleSwitch = this.show;
-  name: string = "enableAxis";
-  displayName: string = "Enable Axis";
-  slices: Slice[] = [this.fill];
+
+  fontSize = new NumUpDown({
+    name: "fontSize",
+    displayName: "Font Size",
+    value: 12,
+  });
+
+  fontFamily = new Dropdown({
+    name: "fontFamily",
+    displayName: "Font Family",
+    value: { displayName: "Segoe UI", value: "Segoe UI" },
+    items: [
+      { displayName: "Arial", value: "Arial" },
+      { displayName: "Segoe UI", value: "Segoe UI" },
+      { displayName: "Times New Roman", value: "Times New Roman" },
+      { displayName: "Verdana", value: "Verdana" },
+    ],
+  });
+
+  name: string = "columnHeaders";
+  displayName: string = "Column Headers";
+  slices: Slice[] = [this.show, this.fontColor, this.fontSize, this.fontFamily];
 }
 
-/**
- * Color Selector Formatting Card
- */
-class ColorSelectorCardSettings extends Card {
+// --- 2. Settings pour les Liens (Refondu) ---
+class LinkSettingsCard extends Card {
   linkColorSource = new Dropdown({
     name: "linkColorSource",
     displayName: "Link Color Source",
@@ -44,31 +58,94 @@ class ColorSelectorCardSettings extends Card {
     ],
   });
 
-  name: string = "colorSelector";
-  displayName: string = "Data Colors";
+  fillOpacity = new NumUpDown({
+    name: "fillOpacity",
+    displayName: "Opacity (%)",
+    value: 50,
+    options: {
+      minValue: { type: powerbi.visuals.ValidatorType.Min, value: 0 },
+      maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 100 },
+    },
+  });
 
-  slices: Slice[] = [this.linkColorSource];
+  name: string = "linkSettings";
+  displayName: string = "Links";
+  slices: Slice[] = [this.linkColorSource, this.fillOpacity];
 }
 
+// --- 3. Settings pour les Noeuds (Amélioré) ---
 class NodesCardSettings extends Card {
   nodeWidth = new NumUpDown({
     name: "nodeWidth",
     displayName: "Node Width",
-    value: 5, // valeur par défaut
+    value: 5,
   });
 
   nodePadding = new NumUpDown({
     name: "nodePadding",
     displayName: "Node Padding",
-    value: 5, // valeur par défaut
+    value: 10,
+  });
+
+  stroke = new ColorPicker({
+    name: "stroke",
+    displayName: "Border Color",
+    value: { value: "#000000" },
+  });
+
+  strokeWidth = new NumUpDown({
+    name: "strokeWidth",
+    displayName: "Border Width",
+    value: 0,
   });
 
   name: string = "nodeSettings";
   displayName: string = "Nodes";
-
-  slices: Slice[] = [this.nodeWidth, this.nodePadding];
+  slices: Slice[] = [
+    this.nodeWidth,
+    this.nodePadding,
+    this.stroke,
+    this.strokeWidth,
+  ];
 }
 
+// --- 4. Settings pour les Labels de Données (Nouveau) ---
+class DataLabelsCardSettings extends Card {
+  show = new ToggleSwitch({
+    name: "show",
+    displayName: "Show Labels",
+    value: true,
+  });
+
+  color = new ColorPicker({
+    name: "color",
+    displayName: "Color",
+    value: { value: "#333333" },
+  });
+
+  fontSize = new NumUpDown({
+    name: "fontSize",
+    displayName: "Font Size",
+    value: 10,
+  });
+
+  fontFamily = new Dropdown({
+    name: "fontFamily",
+    displayName: "Font Family",
+    value: { displayName: "Segoe UI", value: "Segoe UI" },
+    items: [
+      { displayName: "Arial", value: "Arial" },
+      { displayName: "Segoe UI", value: "Segoe UI" },
+      { displayName: "Times New Roman", value: "Times New Roman" },
+    ],
+  });
+
+  name: string = "dataLabels";
+  displayName: string = "Data Labels";
+  slices: Slice[] = [this.show, this.color, this.fontSize, this.fontFamily];
+}
+
+// --- 5. Settings pour les Couleurs de Noeuds (Existant conservé) ---
 class NodeColorCardSettings extends Card {
   colorMode = new Dropdown({
     name: "colorMode",
@@ -103,9 +180,7 @@ class NodeColorCardSettings extends Card {
     visible: false,
   });
 
-  nodeColors: {
-    [nodeName: string]: ColorPicker;
-  } = {};
+  nodeColors: { [nodeName: string]: ColorPicker } = {};
 
   name: string = "nodeColorSettings";
   displayName: string = "Node Colors";
@@ -121,9 +196,8 @@ class NodeColorCardSettings extends Card {
     nodeName: string,
     displayName: string,
     selectionId: powerbi.visuals.ISelectionId,
-    savedColor: string
+    savedColor: string,
   ) {
-    // Only add if it doesn't exist
     if (!this.nodeColors[nodeName]) {
       const colorPicker = new ColorPicker({
         name: "fill",
@@ -133,30 +207,31 @@ class NodeColorCardSettings extends Card {
         visible: true,
         uid: nodeName,
       } as any);
-      console.log(`Node: ${nodeName}`);
-      console.log(`ID Fingerprint:`, JSON.stringify(selectionId.getSelector()));
       this.nodeColors[nodeName] = colorPicker;
       this.slices.push(colorPicker);
     }
   }
 }
 
+// --- MODÈLE PRINCIPAL ---
 export class FormatSettingsModel extends Model {
-  enableAxis = new EnableAxisCardSettings();
-  colorSelector = new ColorSelectorCardSettings();
+  // enableAxis = new EnableAxisCardSettings(); // J'ai retiré celui-ci car peu utile pour un Sankey standard
+  columnHeaders = new ColumnHeadersCardSettings();
+  linkSettings = new LinkSettingsCard();
   nodeSettings = new NodesCardSettings();
+  dataLabels = new DataLabelsCardSettings();
   nodeColor = new NodeColorCardSettings();
 
   cards: Card[] = [
-    this.enableAxis,
-    this.colorSelector,
+    this.columnHeaders,
+    this.linkSettings,
     this.nodeSettings,
+    this.dataLabels,
     this.nodeColor,
   ];
 
   updateVisibility() {
     const colorMode = this.nodeColor.colorMode.value.value;
-
     this.nodeColor.fixedColor.visible = colorMode === "fixed";
     this.nodeColor.paletteColor1.visible = colorMode === "customPalette";
     this.nodeColor.paletteColor2.visible = colorMode === "customPalette";
@@ -171,8 +246,7 @@ export class FormatSettingsModel extends Model {
     nodeName: string,
     displayName: string,
     selectionId: powerbi.visuals.ISelectionId,
-    savedColor: string
-    // defaultColor: string = "#000000"
+    savedColor: string,
   ) {
     this.nodeColor.addNodeColor(nodeName, displayName, selectionId, savedColor);
   }

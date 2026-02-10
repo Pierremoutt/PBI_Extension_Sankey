@@ -291,13 +291,28 @@ export class Visual implements IVisual {
     columnNames: string[],
   ): void {
     const colorSource =
-      this.formattingSettings.colorSelector.linkColorSource.value.value;
+      this.formattingSettings.linkSettings.linkColorSource.value.value;
     const colorMode = this.formattingSettings.nodeColor.colorMode.value.value;
     const fixedColor = this.formattingSettings.nodeColor.fixedColor.value.value;
     const paletteColor1 =
       this.formattingSettings.nodeColor.paletteColor1.value.value;
     const paletteColor2 =
       this.formattingSettings.nodeColor.paletteColor2.value.value;
+    const linkOpacity =
+      this.formattingSettings.linkSettings.fillOpacity.value / 100;
+
+    const showHeaders = this.formattingSettings.columnHeaders.show.value;
+    const headerColor =
+      this.formattingSettings.columnHeaders.fontColor.value.value;
+    const headerFontSize = this.formattingSettings.columnHeaders.fontSize.value;
+    const headerFontFamily =
+      this.formattingSettings.columnHeaders.fontFamily.value.value;
+    const strokeColor = this.formattingSettings.nodeSettings.stroke.value.value;
+    const strokeWidth = this.formattingSettings.nodeSettings.strokeWidth.value;
+    const labelColor = this.formattingSettings.dataLabels.color.value.value;
+    const labelFontSize = this.formattingSettings.dataLabels.fontSize.value;
+    const labelFontFamily =
+      this.formattingSettings.dataLabels.fontFamily.value.value;
 
     // Assign colors to nodes based on the selected color mode
     sankeyData.nodes.forEach((node: any) => {
@@ -334,30 +349,29 @@ export class Visual implements IVisual {
 
     this.formattingSettings.updateVisibility();
 
-    // Draw nodes header
-    columnNames.forEach((name, index) => {
-      // Trouver tous les noeuds qui appartiennent à cette colonne (ceux finissant par __index)
-      const nodesInColumn = sankeyData.nodes.filter((n: any) =>
-        n.name.endsWith(`__${index}`),
-      );
+    if (showHeaders) {
+      columnNames.forEach((name, index) => {
+        const nodesInColumn = sankeyData.nodes.filter((n: any) =>
+          n.name.endsWith(`__${index}`),
+        );
 
-      if (nodesInColumn.length > 0) {
-        // Calculer la position X moyenne de cette colonne
-        // (En général, tous les noeuds d'une colonne ont le même x0 et x1 dans un Sankey standard)
-        const firstNode = nodesInColumn[0];
-        const columnX = (firstNode.x0 + firstNode.x1) / 2;
+        if (nodesInColumn.length > 0) {
+          const firstNode = nodesInColumn[0];
+          const columnX = (firstNode.x0 + firstNode.x1) / 2;
 
-        this.svg
-          .append("text")
-          .attr("x", columnX)
-          .attr("y", 15) // Position verticale dans la marge réservée
-          .attr("text-anchor", "middle") // Centrer le texte
-          .style("font-size", "12px")
-          .style("font-weight", "bold")
-          .style("fill", "#333") // Couleur du texte
-          .text(name);
-      }
-    });
+          this.svg
+            .append("text")
+            .attr("x", columnX)
+            .attr("y", 15)
+            .attr("text-anchor", "middle")
+            .style("font-size", `${headerFontSize}px`) // <--- Dynamique
+            .style("font-family", headerFontFamily) // <--- Dynamique
+            .style("font-weight", "bold")
+            .style("fill", headerColor) // <--- Dynamique
+            .text(name);
+        }
+      });
+    }
 
     // Draw nodes
     this.svg
@@ -371,7 +385,9 @@ export class Visual implements IVisual {
       .attr("height", (d: any) => (isNaN(d.y1 - d.y0) ? 0 : d.y1 - d.y0))
       .attr("width", (d: any) => (isNaN(d.x1 - d.x0) ? 0 : d.x1 - d.x0))
       .style("fill", (d: any) => d.color)
-      .style("stroke", "black");
+      .style("fill", (d: any) => d.color)
+      .style("stroke", strokeColor) // <--- Dynamique
+      .style("stroke-width", strokeWidth); // <--- Dynamique
 
     // Draw links
     this.svg
@@ -386,6 +402,7 @@ export class Visual implements IVisual {
         colorSource === "source" ? d.source.color : d.target.color,
       )
       .attr("fill", "none")
+      .attr("fill-opacity", linkOpacity)
       .append("title")
       .text(
         (d: SankeyLink) =>
@@ -416,8 +433,9 @@ export class Visual implements IVisual {
         return "start";
       })
       .text((d: SankeyNode) => d.displayName || d.name)
-      .style("font-size", "10px")
-      .style("fill", "#333");
+      .style("font-size", `${labelFontSize}px`) // <--- Dynamique
+      .style("font-family", labelFontFamily) // <--- Dynamique
+      .style("fill", labelColor);
   }
 
   public getFormattingModel(): powerbi.visuals.FormattingModel {

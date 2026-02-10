@@ -11,81 +11,105 @@
       "kind": "Measure"
     }
   ],
-
   "dataViewMappings": [
     {
       "categorical": {
         "categories": {
-          "for": {
-            "in": "category"
-          },
-          "dataReductionAlgorithm": {
-            "top": {}
-          }
+          "for": { "in": "category" },
+          "dataReductionAlgorithm": { "top": {} }
         },
         "values": {
-          "select": [
-            {
-              "bind": {
-                "to": "measure"
-              }
-            }
-          ]
+          "select": [{ "bind": { "to": "measure" } }]
         }
       }
     }
   ],
   "privileges": [],
   "objects": {
-    "enableAxis": {
+    "columnHeaders": {
+      "displayName": "Column Headers",
       "properties": {
         "show": {
-          "type": {
-            "bool": true
-          }
+          "displayName": "Show Headers",
+          "type": { "bool": true }
         },
-        "fill": {
-          "type": {
-            "fill": {
-              "solid": {
-                "color": true
-              }
-            }
-          }
+        "fontColor": {
+          "displayName": "Font Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "fontSize": {
+          "displayName": "Text Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "formatting": { "fontFamily": true } }
         }
       }
     },
-    "colorSelector": {
+    "linkSettings": {
+      "displayName": "Links",
       "properties": {
         "linkColorSource": {
           "displayName": "Link Color Source",
           "type": {
-            "enumeration": [{ "value": "source" }, { "value": "target" }]
+            "enumeration": [
+              { "value": "source", "displayName": "Source Node" },
+              { "value": "target", "displayName": "Target Node" },
+              { "value": "gradient", "displayName": "Gradient (Future)" }
+            ]
           }
+        },
+        "fillOpacity": {
+          "displayName": "Opacity",
+          "type": { "numeric": true }
         }
       }
     },
-
     "nodeSettings": {
       "displayName": "Nodes",
       "properties": {
         "nodeWidth": {
           "displayName": "Width",
-          "type": {
-            "numeric": true
-          }
+          "type": { "numeric": true }
         },
         "nodePadding": {
-          "displayName": "Padding",
-          "type": {
-            "numeric": true
-          }
+          "displayName": "Vertical Padding",
+          "type": { "numeric": true }
+        },
+        "stroke": {
+          "displayName": "Stroke Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "strokeWidth": {
+          "displayName": "Stroke Width",
+          "type": { "numeric": true }
         }
       }
     },
-
+    "dataLabels": {
+      "displayName": "Data Labels",
+      "properties": {
+        "show": {
+          "displayName": "Show",
+          "type": { "bool": true }
+        },
+        "color": {
+          "displayName": "Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "fontSize": {
+          "displayName": "Text Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "formatting": { "fontFamily": true } }
+        }
+      }
+    },
     "nodeColorSettings": {
-      "displayName": "Node Color Mode",
+      "displayName": "Node Colors",
       "properties": {
         "colorMode": {
           "displayName": "Color Mode",
@@ -99,26 +123,20 @@
           }
         },
         "fixedColor": {
-          "displayName": "Fixed Node Color",
+          "displayName": "Fixed Color",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "paletteColor1": {
-          "displayName": "Custom Palette Color 1",
+          "displayName": "Gradient Start / Color 1",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "paletteColor2": {
-          "displayName": "Custom Palette Color 2",
+          "displayName": "Gradient End / Color 2",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "fill": {
-          "displayName": "Node Fill Color",
-          "type": {
-            "fill": {
-              "solid": {
-                "color": true
-              }
-            }
-          }
+          "displayName": "Specific Node Color",
+          "type": { "fill": { "solid": { "color": true } } }
         }
       }
     }
